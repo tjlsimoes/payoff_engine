@@ -14,7 +14,7 @@ public static class PricingEndpoints
                     return Results.Ok(p.Price(req));
             }
 
-            return Results.BadRequest("Unknown instrument type");
+            return Results.BadRequest($"Unknown instrument type: {req.InstrumentType}");
         });
     }
 }

@@ -199,12 +199,12 @@ Attempt only once the mandatory part is solid:
 ---
 
 ### Step 5 — The autocallable pricer (B1 — the contrast)
-- [ ] `AutocallablePricer : IInstrumentPricer`, `InstrumentType => "Autocallable"`
-- [ ] Loop over the path; first observation `>= autocallLevel` (use `Strike`) → early redemption
-- [ ] Accrued coupon pro-rated: `Notional * CouponRate * (period + 1) / PricePath.Length`
-- [ ] Distinct scenario string encoding which period autocalled (e.g. `$"AutocalledAtPeriod{period+1}"`)
-- [ ] Never autocalled → fall back to BRC maturity logic
-- [ ] Register it alongside the BRC pricer (second `AddSingleton<IInstrumentPricer, ...>`)
+- [x] `AutocallablePricer : IInstrumentPricer`, `InstrumentType => "Autocallable"`
+- [x] Loop over the path; first observation `>= autocallLevel` (use `Strike`) → early redemption
+- [x] Accrued coupon pro-rated: `Notional * CouponRate * (period + 1) / PricePath.Length`
+- [x] Distinct scenario string encoding which period autocalled (e.g. `$"AutocalledAtPeriod{period+1}"`)
+- [x] Never autocalled → fall back to BRC maturity logic
+- [x] Register it alongside the BRC pricer (second `AddSingleton<IInstrumentPricer, ...>`)
 
 **Checkpoint — "Can I do this?":** State the **one structural difference** between the two pricers in a sentence. *(BRC = single maturity evaluation; autocallable = path loop with early exit.)*
 
