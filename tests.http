@@ -1,0 +1,202 @@
+###############################################################################
+# PayoffEngine — REST Client test vectors
+#
+# For the VS Code "REST Client" extension (humao.rest-client).
+# Click "Send Request" above any request block below.
+#
+# Adjust @host to wherever your API listens (dotnet run prints the port).
+# Each block lists the EXPECTED response so it doubles as a test oracle.
+# All prices are fractions of initial spot: 1.00 = at-the-money, 0.70 = 70%.
+# Verified arithmetic: notional 1000, couponRate 0.08 -> coupon 80.
+###############################################################################
+
+@host = http://localhost:5116
+@contentType = application/json
+
+###############################################################################
+# BRC — Scenario 1: final price >= strike -> full notional, cash.
+# Path ends at 1.05 (>= strike 1.00) and never touches barrier 0.70.
+# EXPECT 200:
+#   Redemption     = 1000
+#   CouponPaid     = 80
+#   Scenario       = "AtOrAboveStrike"
+#   BarrierBreached= false
+###############################################################################
+POST {{host}}/price
+Content-Type: {{contentType}}
+
+{
+  "instrumentType": "BarrierReverseConvertible",
+  "notional": 1000,
+  "strike": 1.00,
+  "barrier": 0.70,
+  "couponRate": 0.08,
+  "pricePath": [1.00, 0.95, 1.02, 1.05]
+}
+
+###############################################################################
+# BRC — Scenario 2: final < strike, barrier NEVER touched -> full notional, cash.
+# Path ends at 0.90 (< strike 1.00); minimum 0.85, never <= barrier 0.70.
+# EXPECT 200:
+#   Redemption     = 1000
+#   CouponPaid     = 80
+#   Scenario       = "BelowStrikeBarrierIntact"
+#   BarrierBreached= false
+###############################################################################
+POST {{host}}/price
+Content-Type: {{contentType}}
+
+{
+  "instrumentType": "BarrierReverseConvertible",
+  "notional": 1000,
+  "strike": 1.00,
+  "barrier": 0.70,
+  "couponRate": 0.08,
+  "pricePath": [1.00, 0.92, 0.85, 0.90]
+}
+
+###############################################################################
+# BRC — Scenario 3: final < strike AND barrier touched -> share-equivalent.
+# Path dips to 0.65 (<= barrier 0.70) and ends at 0.60.
+# Redemption = notional * final / strike = 1000 * 0.60 / 1.00 = 600.
+# EXPECT 200:
+#   Redemption     = 600
+#   CouponPaid     = 80
+#   Scenario       = "BelowStrikeBarrierBreached"
+#   BarrierBreached= true
+###############################################################################
+POST {{host}}/price
+Content-Type: {{contentType}}
+
+{
+  "instrumentType": "BarrierReverseConvertible",
+  "notional": 1000,
+  "strike": 1.00,
+  "barrier": 0.70,
+  "couponRate": 0.08,
+  "pricePath": [1.00, 0.80, 0.65, 0.60]
+}
+
+###############################################################################
+# Autocallable — autocalls early at the first observation >= strike (1.00).
+# Path: 0.95, 0.98, 1.01, 1.10 -> first >= 1.00 is period 3 (index 2).
+# Accrued = notional * couponRate * period / pathLength = 1000*0.08*3/4 = 60.
+# EXPECT 200:
+#   Redemption = 1000
+#   CouponPaid = 60
+#   Scenario   = "AutocalledAtPeriod3"
+#   BarrierBreached = false
+###############################################################################
+POST {{host}}/price
+Content-Type: {{contentType}}
+
+{
+  "instrumentType": "Autocallable",
+  "notional": 1000,
+  "strike": 1.00,
+  "barrier": 0.70,
+  "couponRate": 0.08,
+  "pricePath": [0.95, 0.98, 1.01, 1.10]
+}
+
+###############################################################################
+# Autocallable — never reaches autocall level -> falls back to BRC maturity.
+# Path: 0.95, 0.80, 0.65, 0.60 -> never >= 1.00; ends 0.60, breached barrier.
+# Falls into BRC Scenario 3: redemption = 1000 * 0.60 = 600.
+# EXPECT 200:
+#   Redemption = 600
+#   CouponPaid = 80   (BRC coupon path, full coupon)
+#   Scenario   = "BelowStrikeBarrierBreached"
+#   BarrierBreached = true
+###############################################################################
+POST {{host}}/price
+Content-Type: {{contentType}}
+
+{
+  "instrumentType": "Autocallable",
+  "notional": 1000,
+  "strike": 1.00,
+  "barrier": 0.70,
+  "couponRate": 0.08,
+  "pricePath": [0.95, 0.80, 0.65, 0.60]
+}
+
+###############################################################################
+# ERROR — unknown instrument type -> 400 Bad Request.
+# EXPECT 400 with a message naming the unknown instrument.
+###############################################################################
+POST {{host}}/price
+Content-Type: {{contentType}}
+
+{
+  "instrumentType": "RainbowKnockout",
+  "notional": 1000,
+  "strike": 1.00,
+  "barrier": 0.70,
+  "couponRate": 0.08,
+  "pricePath": [1.00, 0.95]
+}
+
+###############################################################################
+# ERROR (needs B2 validation) — empty price path -> 400 Bad Request.
+# Without B2 implemented this may instead throw on PricePath[^1];
+# implementing B2 is what turns that into a clean 400.
+# EXPECT 400 with a descriptive message.
+###############################################################################
+POST {{host}}/price
+Content-Type: {{contentType}}
+
+{
+  "instrumentType": "BarrierReverseConvertible",
+  "notional": 1000,
+  "strike": 1.00,
+  "barrier": 0.70,
+  "couponRate": 0.08,
+  "pricePath": []
+}
+
+###############################################################################
+# ERROR (needs B2 validation) — negative notional -> 400 Bad Request.
+# EXPECT 400 with a descriptive message.
+###############################################################################
+POST {{host}}/price
+Content-Type: {{contentType}}
+
+{
+  "instrumentType": "BarrierReverseConvertible",
+  "notional": -500,
+  "strike": 1.00,
+  "barrier": 0.70,
+  "couponRate": 0.08,
+  "pricePath": [1.00, 0.95, 0.90]
+}
+
+###############################################################################
+# BATCH — prices many instruments concurrently with Task.WhenAll (M4).
+# Mixes all five valid cases above. EXPECT 200 with an array of 5 results,
+# in the same order, matching each single-request expectation:
+#   [0] AtOrAboveStrike,           Redemption 1000, Coupon 80
+#   [1] BelowStrikeBarrierIntact,  Redemption 1000, Coupon 80
+#   [2] BelowStrikeBarrierBreached,Redemption 600,  Coupon 80
+#   [3] AutocalledAtPeriod3,       Redemption 1000, Coupon 60
+#   [4] BelowStrikeBarrierBreached,Redemption 600,  Coupon 80
+# Timing check: ~one Task.Delay(50) worth of wall time, NOT 5x.
+###############################################################################
+POST {{host}}/price/batch
+Content-Type: {{contentType}}
+
+[
+  { "instrumentType": "BarrierReverseConvertible", "notional": 1000, "strike": 1.00, "barrier": 0.70, "couponRate": 0.08, "pricePath": [1.00, 0.95, 1.02, 1.05] },
+  { "instrumentType": "BarrierReverseConvertible", "notional": 1000, "strike": 1.00, "barrier": 0.70, "couponRate": 0.08, "pricePath": [1.00, 0.92, 0.85, 0.90] },
+  { "instrumentType": "BarrierReverseConvertible", "notional": 1000, "strike": 1.00, "barrier": 0.70, "couponRate": 0.08, "pricePath": [1.00, 0.80, 0.65, 0.60] },
+  { "instrumentType": "Autocallable", "notional": 1000, "strike": 1.00, "barrier": 0.70, "couponRate": 0.08, "pricePath": [0.95, 0.98, 1.01, 1.10] },
+  { "instrumentType": "Autocallable", "notional": 1000, "strike": 1.00, "barrier": 0.70, "couponRate": 0.08, "pricePath": [0.95, 0.80, 0.65, 0.60] }
+]
+
+###############################################################################
+# GET /instruments (needs B3) — lists supported instrument types.
+# EXPECT 200 with both type strings, derived from the registered pricers:
+#   ["BarrierReverseConvertible", "Autocallable"]
+###############################################################################
+GET {{host}}/instruments
+Accept: {{contentType}}
