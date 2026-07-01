@@ -21,12 +21,12 @@ public class BarrierReverseConvertiblePricer : IInstrumentPricer
         else if (req.PricePath[^1] < req.Strike)
         {
             scenario = "BelowStrikeBarrierIntact";
-            redemption = req.Notional + req.Notional * req.CouponRate;
+            redemption = req.Notional;
         }
         else
         {
             scenario = "AtOrAboveStrike";
-            redemption = req.Notional + req.Notional * req.CouponRate;
+            redemption = req.Notional;
         }
 
         PricingResult result = new(
