@@ -7,6 +7,11 @@ public static class PricingEndpoints
     public static void MapPricingEndpoints(this WebApplication app)
     {
 
+        app.MapGet("/instruments", (IEnumerable<IInstrumentPricer> pricers) =>
+        {
+            return Results.Ok(pricers.Select(p => p.InstrumentType));
+        });
+
         // POST /price
         app.MapPost("/price", (PricingRequest req, IEnumerable<IInstrumentPricer> pricers) =>
         {

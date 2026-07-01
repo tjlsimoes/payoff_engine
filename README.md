@@ -211,10 +211,10 @@ Attempt only once the mandatory part is solid:
 ---
 
 ### Step 6 — Batch endpoint with Task.WhenAll (M4)
-- [ ] `POST /price/batch` accepts `PricingRequest[]`
-- [ ] A local `async Task<PricingResult> PriceOneAsync(...)` wraps a single price; put an `await Task.Delay(50)` in as a stand-in for slow I/O / heavy compute
-- [ ] Start all tasks then await as a group: `await Task.WhenAll(requests.Select(PriceOneAsync))`
-- [ ] Returns `200` with the array of results
+- [x] `POST /price/batch` accepts `PricingRequest[]`
+- [x] A local `async Task<PricingResult> PriceOneAsync(...)` wraps a single price; put an `await Task.Delay(50)` in as a stand-in for slow I/O / heavy compute
+- [x] Start all tasks then await as a group: `await Task.WhenAll(requests.Select(PriceOneAsync))`
+- [x] Returns `200` with the array of results
 
 **Checkpoint — "Can I do this?":** Explain why `Task.WhenAll` over the batch is faster than awaiting each price in a loop, and tie it to *why async exists*. *(Independent operations started together overlap their wait time instead of summing it; `await` frees the thread during each delay — Phase 2 §24.)*
 
@@ -223,8 +223,8 @@ Attempt only once the mandatory part is solid:
 ---
 
 ### Step 7 — Bonus polish (B2, B3)
-- [ ] **B2** — Validate input before pricing: non-empty `PricePath`, positive `Notional`, `Barrier` and `Strike` in sane ranges; return descriptive `400`s
-- [ ] **B3** — `GET /instruments` returns the supported type strings, derived from the injected `IEnumerable<IInstrumentPricer>` (not hardcoded)
+- [x] **B2** — Validate input before pricing: non-empty `PricePath`, positive `Notional`, `Barrier` and `Strike` in sane ranges; return descriptive `400`s
+- [x] **B3** — `GET /instruments` returns the supported type strings, derived from the injected `IEnumerable<IInstrumentPricer>` (not hardcoded)
 
 **Checkpoint:** Bad input is rejected at the boundary with a `400` and a message that says what's wrong; `GET /instruments` lists both types and would automatically include a third pricer if you added one.
 
