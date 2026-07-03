@@ -10,7 +10,7 @@ public record class PricingRequest(
     [Required(ErrorMessage = "Notional is required")]
     [RegularExpression(@"^\d+\.?\d{0,2}$", ErrorMessage = "Invalid Notional")]
     [Range(1, 100_000, ErrorMessage = "Total must be between 1 and 100_000")]
-    long        Notional,           // initial value, e.g. 1000
+    decimal     Notional,           // initial value, e.g. 1000
 
     [Required(ErrorMessage = "Strike is required")]
     [RegularExpression(@"^\d+\.?\d{0,2}$", ErrorMessage = "Invalid Strike")]

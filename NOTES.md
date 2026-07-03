@@ -350,32 +350,32 @@ public class BarrierReverseConvertiblePricerTests
 *Second priority. ~2–3 hours depending on how far you take `GET /history`.*
 
 ### B1 — Entity design
-- [ ] `PricingRecord` entity: `Id` (Guid), the request fields you want to keep (`InstrumentType`, `Notional`, `Strike`, `Barrier`, `CouponRate`), the result fields (`Redemption`, `CouponPaid`, `Scenario`, `BarrierBreached`), and a `PricedAtUtc` timestamp
-- [ ] Decide: store `PricePath` as a serialized string/JSON column, or drop it (it's an input, not needed for history queries) — either is defensible, be ready to justify your choice
-- [ ] This is a `class`, not a `record` — EF Core entities are typically mutable, tracked reference types (contrast with the `record` DTOs, Phase 1 §4c)
+- [X] `PricingRecord` entity: `Id` (Guid), the request fields you want to keep (`InstrumentType`, `Notional`, `Strike`, `Barrier`, `CouponRate`), the result fields (`Redemption`, `CouponPaid`, `Scenario`, `BarrierBreached`), and a `PricedAtUtc` timestamp
+- [X] Decide: store `PricePath` as a serialized string/JSON column, or drop it (it's an input, not needed for history queries) — either is defensible, be ready to justify your choice
+- [X] This is a `class`, not a `record` — EF Core entities are typically mutable, tracked reference types (contrast with the `record` DTOs, Phase 1 §4c)
 
 ### B2 — DbContext + provider
-- [ ] `PayoffEngineDbContext : DbContext` with `DbSet<PricingRecord> PricingRecords`
-- [ ] Pick a provider: **SQLite** is the pragmatic choice here (zero setup, file-based, real EF Core migrations) — Postgres/SQL Server are overkill for a local showcase project
-- [ ] Register in `Program.cs`: `builder.Services.AddDbContext<PayoffEngineDbContext>(opt => opt.UseSqlite(connectionString))`
-- [ ] Connection string in `appsettings.json` (Phase 2 §14 habit — never hardcode)
+- [X] `PayoffEngineDbContext : DbContext` with `DbSet<PricingRecord> PricingRecords`
+- [X] Pick a provider: **SQLite** is the pragmatic choice here (zero setup, file-based, real EF Core migrations) — Postgres/SQL Server are overkill for a local showcase project
+- [X] Register in `Program.cs`: `builder.Services.AddDbContext<PayoffEngineDbContext>(opt => opt.UseSqlite(connectionString))`
+- [X] Connection string in `appsettings.json` (Phase 2 §14 habit — never hardcode)
 
 ### B3 — Migration
-- [ ] `dotnet ef migrations add InitialCreate`
-- [ ] `dotnet ef database update`
-- [ ] Confirm the `.db` file / table exists
+- [X] `dotnet ef migrations add InitialCreate`
+- [X] `dotnet ef database update`
+- [X] Confirm the `.db` file / table exists
 
 **Checkpoint:** Explain in one sentence what a migration actually does *(a versioned, generated diff between your model and the schema, applied to bring the DB in line)*.
 
 ### B4 — Wire persistence into `POST /price`
-- [ ] After pricing, save a `PricingRecord` via the injected `DbContext` and `SaveChangesAsync()`
-- [ ] Decide the `DbContext` lifetime: **Scoped** is correct here (per-request, unlike your stateless Singleton pricers) — a good contrast to justify out loud
-- [ ] Response still returns the `PricingResult` — persistence is a side effect, not a response-shape change
+- [X] After pricing, save a `PricingRecord` via the injected `DbContext` and `SaveChangesAsync()`
+- [X] Decide the `DbContext` lifetime: **Scoped** is correct here (per-request, unlike your stateless Singleton pricers) — a good contrast to justify out loud
+- [X] Response still returns the `PricingResult` — persistence is a side effect, not a response-shape change
 
 ### B5 — `GET /history`
-- [ ] Returns past `PricingRecord`s, most recent first
-- [ ] Support at least one filter: `?instrumentType=Autocallable` and/or a date range
-- [ ] Use `IQueryable` and apply filters *before* `.ToListAsync()` — this is the Phase 1 §15 footgun in reverse: filter in the DB, don't pull everything into memory first
+- [X] Returns past `PricingRecord`s, most recent first
+- [X] Support at least one filter: `?instrumentType=Autocallable` and/or a date range
+- [X] Use `IQueryable` and apply filters *before* `.ToListAsync()` — this is the Phase 1 §15 footgun in reverse: filter in the DB, don't pull everything into memory first
 
 ```csharp
 app.MapGet("/history", async (PayoffEngineDbContext db, string? instrumentType) =>

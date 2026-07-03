@@ -1,9 +1,26 @@
 using System;
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 
 namespace PayoffEngine;
 
 public static class PricingEndpoints
 {
+
+    static PricingRecord ToRecord(PricingRequest req, PricingResult ret) => new()
+    {
+        InstrumentType  = req.InstrumentType,
+        Notional        = req.Notional,
+        Strike          = req.Strike,
+        Barrier         = req.Barrier,
+        CouponRate      = req.CouponRate,
+        PricePath       = JsonSerializer.Serialize(req.PricePath),
+        Redemption      = ret.Redemption,
+        CouponPaid      = ret.CouponPaid,
+        Scenario        = ret.Scenario,
+        BarrierBreached = ret.BarrierBreached
+    };
+
     public static void MapPricingEndpoints(this WebApplication app)
     {
 
@@ -13,13 +30,28 @@ public static class PricingEndpoints
         });
 
         // POST /price
-        app.MapPost("/price", (PricingRequest req, IEnumerable<IInstrumentPricer> pricers) =>
+        app.MapPost("/price", async (PayoffEngineDbContext db, PricingRequest req, IEnumerable<IInstrumentPricer> pricers, ILogger<Program> logger) =>
         {
-            foreach (var p in pricers)
-            {
-                if (p.InstrumentType == req.InstrumentType)
-                    return Results.Ok(p.Price(req));
-            }
+
+                foreach (var p in pricers)
+                {
+                    if (p.InstrumentType == req.InstrumentType)
+                    {
+                        PricingResult ret = p.Price(req);
+                        PricingRecord record = ToRecord(req, ret);
+                        try
+                        {
+                            db.Add(record);
+                            await db.SaveChangesAsync();
+                            return Results.Ok(ret);
+                        }
+                        catch (Exception e) when ( e is Microsoft.EntityFrameworkCore.DbUpdateException || e is Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+                        {
+                            logger.LogError(e, "Falied to persist pricing record");
+                            return Results.Problem("Error on database persistence");
+                        }
+                    }
+                }
 
             return Results.BadRequest($"Unknown instrument type: {req.InstrumentType}");
         });
@@ -27,7 +59,7 @@ public static class PricingEndpoints
 
 
         // POST /price/batch
-        app.MapPost("/price/batch", async (PricingRequest[] requests, IEnumerable<IInstrumentPricer> pricers) =>
+        app.MapPost("/price/batch", async (PayoffEngineDbContext db, PricingRequest[] requests, IEnumerable<IInstrumentPricer> pricers, ILogger<Program> logger) =>
         {
             List<Task<PricingResult>> allTasks = [];
 
@@ -37,13 +69,31 @@ public static class PricingEndpoints
                     allTasks.Add(PriceOneAsync(req, pricers));
 
                 await Task.WhenAll(allTasks);
-                return Results.Ok(allTasks.Select(task => task.Result));
+                var results = allTasks.Select(task => task.Result);
+                db.AddRange(requests.Zip(results, (req, ret) => ToRecord(req, ret)));
+                await db.SaveChangesAsync();
+                return Results.Ok(results);
             }
             catch (BadHttpRequestException e)
             {
                 return Results.BadRequest($"{e.Message}");
             }
+            catch (Exception e) when ( e is Microsoft.EntityFrameworkCore.DbUpdateException || e is Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+            {
+                logger.LogError(e, "Falied to persist pricing record");
+                return Results.Problem("Error on database persistence");
+            }
         });
+
+        app.MapGet("/history", async (PayoffEngineDbContext db, string? instrumentType) =>
+        {
+            IQueryable<PricingRecord> query = db.PricingRecords.OrderByDescending(p => p.PricedAtUtc);
+            if (!String.IsNullOrEmpty(instrumentType))
+                query = query.Where(p => p.InstrumentType == instrumentType);
+            return Results.Ok(await query.ToListAsync());
+        });
+
+
     }
 
     async private static Task<PricingResult> PriceOneAsync(PricingRequest req, IEnumerable<IInstrumentPricer> pricers)
