@@ -69,9 +69,9 @@ Attempt only once the mandatory part is solid:
 ## Step-by-step
 
 ### Step 0 — Setup
-- [x] `dotnet new webapi -n PayoffEngine` (minimal API style)
-- [x] Project builds and runs; the default endpoint responds
-- [x] `<Nullable>enable</Nullable>` and `<ImplicitUsings>enable</ImplicitUsings>` confirmed in the `.csproj` (Phase 1 §1, §7)
+- [X] `dotnet new webapi -n PayoffEngine` (minimal API style)
+- [X] Project builds and runs; the default endpoint responds
+- [X] `<Nullable>enable</Nullable>` and `<ImplicitUsings>enable</ImplicitUsings>` confirmed in the `.csproj` (Phase 1 §1, §7)
 
 **Checkpoint:** `dotnet run` serves the template app with no errors.
 
@@ -109,10 +109,10 @@ Attempt only once the mandatory part is solid:
 > For very large solutions you'd also split into multiple **projects** within a solution — e.g. a separate class library for domain logic so it can be tested and referenced independently of the web layer.
 
 ### Step 1 — Domain model (the DTOs)
-- [x] `PricingRequest` record: `InstrumentType`, `Notional`, `Strike`, `Barrier`, `CouponRate`, `decimal[] PricePath`
-- [x] `PricingResult` record: `Redemption`, `CouponPaid`, `Scenario` (string, for explainability), `BarrierBreached` (bool)
-- [x] Both use `decimal` (not `double`) for money — Phase 1 §5
-- [x] Both are `record`, not `class`
+- [X] `PricingRequest` record: `InstrumentType`, `Notional`, `Strike`, `Barrier`, `CouponRate`, `decimal[] PricePath`
+- [X] `PricingResult` record: `Redemption`, `CouponPaid`, `Scenario` (string, for explainability), `BarrierBreached` (bool)
+- [X] Both use `decimal` (not `double`) for money — Phase 1 §5
+- [X] Both are `record`, not `class`
 
 **Checkpoint — "Can I do this?":** Explain why these are `record`s and not `class`es. *(Expected: immutable data models, value equality, free `ToString` for logging — the DTO case named in Phase 1 §4c.)*
 
@@ -128,23 +128,23 @@ Attempt only once the mandatory part is solid:
 ---
 
 ### Step 2 — The pricer interface
-- [x] `IInstrumentPricer` with `string InstrumentType { get; }` and `PricingResult Price(PricingRequest req)`
-- [x] The interface name is `I`-prefixed (Phase 1 §10)
+- [X] `IInstrumentPricer` with `string InstrumentType { get; }` and `PricingResult Price(PricingRequest req)`
+- [X] The interface name is `I`-prefixed (Phase 1 §10)
 
 **Checkpoint:** The interface compiles and expresses "any instrument that can price itself and knows its own type string."
 
 ---
 
 ### Step 3 — The BRC pricer (the core — M2)
-- [x] `BarrierReverseConvertiblePricer : IInstrumentPricer`
-- [x] `InstrumentType => "BarrierReverseConvertible"`
-- [x] Coupon computed as `Notional * CouponRate`, returned in **all** branches
-- [x] Final price read with the index-from-end operator: `req.PricePath[^1]` (Phase 1 idiom)
-- [x] Barrier breach detected with LINQ: `req.PricePath.Any(p => p <= req.Barrier)` (Phase 1 §15)
-- [x] Scenario 1: `finalPrice >= Strike` → full notional, cash
-- [x] Scenario 2: below strike, not breached → full notional, cash
-- [x] Scenario 3: below strike AND breached → share-equivalent redemption (`Notional * finalPrice / Strike`)
-- [x] Each branch sets a distinct `Scenario` string
+- [X] `BarrierReverseConvertiblePricer : IInstrumentPricer`
+- [X] `InstrumentType => "BarrierReverseConvertible"`
+- [X] Coupon computed as `Notional * CouponRate`, returned in **all** branches
+- [X] Final price read with the index-from-end operator: `req.PricePath[^1]` (Phase 1 idiom)
+- [X] Barrier breach detected with LINQ: `req.PricePath.Any(p => p <= req.Barrier)` (Phase 1 §15)
+- [X] Scenario 1: `finalPrice >= Strike` → full notional, cash
+- [X] Scenario 2: below strike, not breached → full notional, cash
+- [X] Scenario 3: below strike AND breached → share-equivalent redemption (`Notional * finalPrice / Strike`)
+- [X] Each branch sets a distinct `Scenario` string
 
 **Checkpoint — "Can I do this?":** Hand-trace all three scenarios on paper with a sample path (e.g. barrier `0.70`, strike `1.00`), then confirm the code agrees. Worked traces to verify against:
 - Path ending `1.05`, never below `0.70` → Scenario 1, redemption = notional.
@@ -154,12 +154,12 @@ Attempt only once the mandatory part is solid:
 ---
 
 ### Step 4 — DI wiring & the single endpoint (M1, M3)
-- [x] Register the BRC pricer against `IInstrumentPricer`
-- [x] `POST /price` resolves the pricers and selects by `InstrumentType`
-- [x] Unknown instrument type → `Results.BadRequest(...)` (`400`, Phase 2 §19)
-- [x] Known type → `Results.Ok(pricer.Price(req))` (`200`)
-- [x] Pricers registered as **Singleton** (they're stateless — Phase 2 §23)
-- [x] Endpoint injects `IEnumerable<IInstrumentPricer>` to get *all* registered pricers
+- [X] Register the BRC pricer against `IInstrumentPricer`
+- [X] `POST /price` resolves the pricers and selects by `InstrumentType`
+- [X] Unknown instrument type → `Results.BadRequest(...)` (`400`, Phase 2 §19)
+- [X] Known type → `Results.Ok(pricer.Price(req))` (`200`)
+- [X] Pricers registered as **Singleton** (they're stateless — Phase 2 §23)
+- [X] Endpoint injects `IEnumerable<IInstrumentPricer>` to get *all* registered pricers
 
 **Checkpoint — "Can I do this?":** Explain why the pricers are **Singleton and not Scoped** *(stateless + thread-safe → one shared instance is correct; nothing per-request to isolate)*, and what `IEnumerable<IInstrumentPricer>` **resolves to** *(every registered implementation of the interface — the strategy-pattern-via-DI move)*.
 
@@ -199,22 +199,22 @@ Attempt only once the mandatory part is solid:
 ---
 
 ### Step 5 — The autocallable pricer (B1 — the contrast)
-- [x] `AutocallablePricer : IInstrumentPricer`, `InstrumentType => "Autocallable"`
-- [x] Loop over the path; first observation `>= autocallLevel` (use `Strike`) → early redemption
-- [x] Accrued coupon pro-rated: `Notional * CouponRate * (period + 1) / PricePath.Length`
-- [x] Distinct scenario string encoding which period autocalled (e.g. `$"AutocalledAtPeriod{period+1}"`)
-- [x] Never autocalled → fall back to BRC maturity logic
-- [x] Register it alongside the BRC pricer (second `AddSingleton<IInstrumentPricer, ...>`)
+- [X] `AutocallablePricer : IInstrumentPricer`, `InstrumentType => "Autocallable"`
+- [X] Loop over the path; first observation `>= autocallLevel` (use `Strike`) → early redemption
+- [X] Accrued coupon pro-rated: `Notional * CouponRate * (period + 1) / PricePath.Length`
+- [X] Distinct scenario string encoding which period autocalled (e.g. `$"AutocalledAtPeriod{period+1}"`)
+- [X] Never autocalled → fall back to BRC maturity logic
+- [X] Register it alongside the BRC pricer (second `AddSingleton<IInstrumentPricer, ...>`)
 
 **Checkpoint — "Can I do this?":** State the **one structural difference** between the two pricers in a sentence. *(BRC = single maturity evaluation; autocallable = path loop with early exit.)*
 
 ---
 
 ### Step 6 — Batch endpoint with Task.WhenAll (M4)
-- [x] `POST /price/batch` accepts `PricingRequest[]`
-- [x] A local `async Task<PricingResult> PriceOneAsync(...)` wraps a single price; put an `await Task.Delay(50)` in as a stand-in for slow I/O / heavy compute
-- [x] Start all tasks then await as a group: `await Task.WhenAll(requests.Select(PriceOneAsync))`
-- [x] Returns `200` with the array of results
+- [X] `POST /price/batch` accepts `PricingRequest[]`
+- [X] A local `async Task<PricingResult> PriceOneAsync(...)` wraps a single price; put an `await Task.Delay(50)` in as a stand-in for slow I/O / heavy compute
+- [X] Start all tasks then await as a group: `await Task.WhenAll(requests.Select(PriceOneAsync))`
+- [X] Returns `200` with the array of results
 
 **Checkpoint — "Can I do this?":** Explain why `Task.WhenAll` over the batch is faster than awaiting each price in a loop, and tie it to *why async exists*. *(Independent operations started together overlap their wait time instead of summing it; `await` frees the thread during each delay — Phase 2 §24.)*
 
@@ -223,8 +223,8 @@ Attempt only once the mandatory part is solid:
 ---
 
 ### Step 7 — Bonus polish (B2, B3)
-- [x] **B2** — Validate input before pricing: non-empty `PricePath`, positive `Notional`, `Barrier` and `Strike` in sane ranges; return descriptive `400`s
-- [x] **B3** — `GET /instruments` returns the supported type strings, derived from the injected `IEnumerable<IInstrumentPricer>` (not hardcoded)
+- [X] **B2** — Validate input before pricing: non-empty `PricePath`, positive `Notional`, `Barrier` and `Strike` in sane ranges; return descriptive `400`s
+- [X] **B3** — `GET /instruments` returns the supported type strings, derived from the injected `IEnumerable<IInstrumentPricer>` (not hardcoded)
 
 **Checkpoint:** Bad input is rejected at the boundary with a `400` and a message that says what's wrong; `GET /instruments` lists both types and would automatically include a third pricer if you added one.
 
@@ -264,3 +264,184 @@ A clean pass means you have a finance-domain API built from your own design, the
 - **Money type:** use `decimal` throughout, never `double` — you're modelling currency (Phase 1 §5).
 - **Keep endpoints thin:** validation and the pricing call belong at the boundary; the payoff logic lives in the pricers (Phase 2 conventions).
 - If the day is time-pressed, **ship M1–M4 with the BRC only**; the autocallable is the clean cut.
+
+
+---
+
+
+# PayoffEngine — Extension Subject Sheet (Phase 6 / Day 12)
+
+*Extends the completed PayoffEngine (Phase 3) with three tracks: **Testing**, **Persistence**, and **Production Readiness**. C# 14 / .NET 10. Companion docs: `payoffengine-subject-sheet.md` (original build), Phase 1 & 2 reference cards (section refs below point to them).*
+
+**Prerequisites:** PayoffEngine mandatory + bonus (B2/B3) complete — confirmed done.
+**Estimated time:** flexible across however many days you have; each track is independently shippable and ordered by interview payoff, not by difficulty.
+
+---
+
+## Objectives
+
+By completing this extension you will have practised:
+
+- Writing focused unit tests (`xUnit`, `[Theory]`/`[Fact]`) against pure business logic, independent of the HTTP layer.
+- Designing an EF Core entity and `DbContext` from scratch (not following a course), running a migration, and wiring persistence into an existing endpoint.
+- Adding a read endpoint with filtering (`GET /history?instrumentType=...`) — a second, different endpoint shape from the original pricing ones.
+- Documenting an API with OpenAPI/Swagger, adding structured logging, and (optionally) a minimal auth gate — the "is this ready for someone else to hit" layer.
+
+---
+
+## Track A — Testing (xUnit)
+
+*Do this first. ~60–90 minutes.*
+
+### A1 — Test project setup
+- [X] `dotnet new xunit -n PayoffEngine.Tests`, add a project reference to `PayoffEngine`
+- [X] `dotnet add reference ../PayoffEngine/PayoffEngine.csproj`
+- [X] Confirm `dotnet test` runs (even with zero real tests yet)
+
+### A2 — BRC scenario tests
+- [X] One `[Fact]` (or a `[Theory]` with `[InlineData]`) per scenario, using the **exact worked traces from the original subject sheet** as your expected values:
+  - Path ending `1.05`, never below `0.70` → Scenario 1, redemption = notional
+  - Path ending `0.90`, min `0.80` → Scenario 2, redemption = notional
+  - Path ending `0.60`, dipped to `0.65` → Scenario 3, redemption = `Notional * 0.60`
+- [X] Assert on `Scenario` string *and* `Redemption`/`CouponPaid`/`BarrierBreached` — not just one field
+- [X] Test the coupon is paid identically in all three (the defining BRC feature)
+
+```csharp
+public class BarrierReverseConvertiblePricerTests
+{
+    private readonly BarrierReverseConvertiblePricer _pricer = new();
+
+    [Fact]
+    public void FinalPriceAboveStrike_RedeemsFullNotional()
+    {
+        var req = new PricingRequest("BarrierReverseConvertible", 1000, 1.00m, 0.70m, 0.08m,
+            new decimal[] { 0.95m, 1.02m, 1.05m });
+
+        var result = _pricer.Price(req);
+
+        Assert.Equal("AtOrAboveStrike", result.Scenario);
+        Assert.Equal(1000m, result.Redemption);
+        Assert.Equal(80m, result.CouponPaid);
+        Assert.False(result.BarrierBreached);
+    }
+    // ... Scenario 2 and 3 as [Fact]s or a [Theory] with the three paths as InlineData
+}
+```
+
+### A3 — Autocallable tests
+- [X] Early-exit case: path hits the autocall level partway through → check the correct period fires, accrued coupon is pro-rated correctly
+- [X] Fallback case: never autocalls → confirm it matches the BRC pricer's result for the same path (this tests the delegation, not just the loop)
+
+### A4 — Bonus: endpoint-level tests
+- [X] `WebApplicationFactory<Program>` + `HttpClient` to hit `POST /price` and `POST /price/batch` for real, asserting on status codes (`200`/`400`) rather than just the pricer logic
+- [X] One test for the unknown-`InstrumentType` → `400` path
+
+**Checkpoint — "Can I do this?":** Explain, without notes, why you tested the pricers directly rather than only through HTTP *(pure logic, no I/O, fast and isolated — HTTP tests are for the wiring, not the math)*, and what makes the pricers easy to test in the first place *(no side effects, no hidden dependencies — this is the payoff of the Singleton + interface design from Phase 3)*.
+
+**Resources:**
+- xUnit getting started: https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-with-dotnet-test
+- `[Theory]`/`[InlineData]`: https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-with-xunit#write-your-tests
+- Integration testing minimal APIs: https://learn.microsoft.com/en-us/aspnet/core/test/integration-tests
+
+---
+
+## Track B — Persistence (EF Core)
+
+*Second priority. ~2–3 hours depending on how far you take `GET /history`.*
+
+### B1 — Entity design
+- [ ] `PricingRecord` entity: `Id` (Guid), the request fields you want to keep (`InstrumentType`, `Notional`, `Strike`, `Barrier`, `CouponRate`), the result fields (`Redemption`, `CouponPaid`, `Scenario`, `BarrierBreached`), and a `PricedAtUtc` timestamp
+- [ ] Decide: store `PricePath` as a serialized string/JSON column, or drop it (it's an input, not needed for history queries) — either is defensible, be ready to justify your choice
+- [ ] This is a `class`, not a `record` — EF Core entities are typically mutable, tracked reference types (contrast with the `record` DTOs, Phase 1 §4c)
+
+### B2 — DbContext + provider
+- [ ] `PayoffEngineDbContext : DbContext` with `DbSet<PricingRecord> PricingRecords`
+- [ ] Pick a provider: **SQLite** is the pragmatic choice here (zero setup, file-based, real EF Core migrations) — Postgres/SQL Server are overkill for a local showcase project
+- [ ] Register in `Program.cs`: `builder.Services.AddDbContext<PayoffEngineDbContext>(opt => opt.UseSqlite(connectionString))`
+- [ ] Connection string in `appsettings.json` (Phase 2 §14 habit — never hardcode)
+
+### B3 — Migration
+- [ ] `dotnet ef migrations add InitialCreate`
+- [ ] `dotnet ef database update`
+- [ ] Confirm the `.db` file / table exists
+
+**Checkpoint:** Explain in one sentence what a migration actually does *(a versioned, generated diff between your model and the schema, applied to bring the DB in line)*.
+
+### B4 — Wire persistence into `POST /price`
+- [ ] After pricing, save a `PricingRecord` via the injected `DbContext` and `SaveChangesAsync()`
+- [ ] Decide the `DbContext` lifetime: **Scoped** is correct here (per-request, unlike your stateless Singleton pricers) — a good contrast to justify out loud
+- [ ] Response still returns the `PricingResult` — persistence is a side effect, not a response-shape change
+
+### B5 — `GET /history`
+- [ ] Returns past `PricingRecord`s, most recent first
+- [ ] Support at least one filter: `?instrumentType=Autocallable` and/or a date range
+- [ ] Use `IQueryable` and apply filters *before* `.ToListAsync()` — this is the Phase 1 §15 footgun in reverse: filter in the DB, don't pull everything into memory first
+
+```csharp
+app.MapGet("/history", async (PayoffEngineDbContext db, string? instrumentType) =>
+{
+    IQueryable<PricingRecord> query = db.PricingRecords.OrderByDescending(r => r.PricedAtUtc);
+    if (!string.IsNullOrEmpty(instrumentType))
+        query = query.Where(r => r.InstrumentType == instrumentType);
+    return Results.Ok(await query.ToListAsync());
+});
+```
+
+**Checkpoint — "Can I do this?":** Explain why the `DbContext` is registered Scoped while the pricers are Singleton *(DbContext holds per-request unit-of-work state and isn't thread-safe to share; the pricers are stateless — directly contrasts Phase 2 §23)*, and why the filter is applied on the `IQueryable` before `ToListAsync()` *(keeps filtering in the DB — Phase 1 §15)*.
+
+**Resources:**
+- EF Core getting started (SQLite): https://learn.microsoft.com/en-us/ef/core/get-started/overview/first-app
+- EF Core migrations: https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/
+- DbContext lifetime in ASP.NET Core: https://learn.microsoft.com/en-us/ef/core/dbcontext-configuration/#using-dbcontext-with-dependency-injection
+
+---
+
+## Track C — Production readiness
+
+*Third priority — do what fits, cut what doesn't. Each item below is independently ~15–30 minutes.*
+
+### C1 — OpenAPI / Swagger
+- [ ] .NET 10 minimal APIs ship built-in OpenAPI support (`AddOpenApi()` / `MapOpenApi()`) — confirm `/openapi/v1.json` resolves
+- [ ] Optionally add Swagger UI (`Swashbuckle.AspNetCore` or the built-in Scalar UI) so the API is browsable, not just machine-readable
+- [ ] Add a short `.WithSummary()`/`.WithDescription()` to each endpoint — cheap, and it reads as intentional API design
+
+### C2 — Structured logging
+- [ ] Inject `ILogger<T>` (or a logging delegate in minimal APIs) into the pricing endpoints
+- [ ] Log one structured line per price: instrument type, scenario, redemption — **not** the full request/response as an unstructured blob
+- [ ] Talking point: structured logging (named properties, not string concatenation) is what makes logs queryable in production (Seq/ELK/Application Insights) instead of just readable
+
+### C3 — Health check
+- [ ] `builder.Services.AddHealthChecks()`, `app.MapHealthChecks("/health")`
+- [ ] Bonus: add a DB check (`AddDbContextCheck<PayoffEngineDbContext>()`) if Track B is done, so `/health` actually reflects DB connectivity
+
+### C4 — Bonus: minimal auth
+- [ ] Simplest defensible version: an API key checked in middleware (`X-Api-Key` header vs a configured value) — not full JWT/identity, that's disproportionate for this project's scope
+- [ ] Talking point: name what you'd do for real auth (JWT bearer tokens, `[Authorize]`, ASP.NET Core Identity) without necessarily building it — knowing the next step matters as much as having built this particular gate
+
+**Checkpoint:** Walk through `/health`, the OpenAPI doc, and one log line from a real request — three concrete artifacts that show the project "looks shipped."
+
+**Resources:**
+- Minimal API OpenAPI support: https://learn.microsoft.com/en-us/aspnet/core/fundamentals/openapi/overview
+- Health checks: https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/health-checks
+- Logging in .NET: https://learn.microsoft.com/en-us/dotnet/core/extensions/logging
+- Minimal API authentication overview: https://learn.microsoft.com/en-us/aspnet/core/security/authentication/
+
+---
+
+## Acceptance criteria (definition of done)
+
+| Track | Done when |
+|---|---|
+| A — Testing | `dotnet test` passes; all 3 BRC scenarios and both autocallable paths (early-exit + fallback) covered with assertions on more than one result field |
+| B — Persistence | `POST /price` persists a record; `GET /history` returns it with at least one working filter; migration is committed |
+| C — Production readiness | At minimum, `/health` responds and OpenAPI doc resolves; logging and auth are stretch goals |
+
+## Self-evaluation — defend the extension
+
+1. Why test the pricers directly instead of only through HTTP?
+2. Why is the `DbContext` Scoped when the pricers are Singleton?
+3. Walk through what a migration does and what happens if you change the entity later.
+4. Why filter on `IQueryable` before `ToListAsync()`, and what goes wrong if you don't?
+5. What's the one auth mechanism you'd reach for if this had to go to production, and why didn't you build the full version here?
+
+A clean pass across all three tracks (or a deliberately scoped subset, if time is short) gives you a project with tested logic, real persistence, and visible production polish — a materially stronger story than PayoffEngine alone.
