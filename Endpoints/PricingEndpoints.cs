@@ -41,6 +41,7 @@ public static class PricingEndpoints
                         PricingRecord record = ToRecord(req, ret);
                         try
                         {
+                            logger.LogInformation($"Calculated {req.InstrumentType} payoff - Scenario: {ret.Scenario} - Redemption: {ret.Redemption} - CouponPaid: {ret.CouponPaid}");
                             db.Add(record);
                             await db.SaveChangesAsync();
                             return Results.Ok(ret);
@@ -70,7 +71,10 @@ public static class PricingEndpoints
 
                 await Task.WhenAll(allTasks);
                 var results = allTasks.Select(task => task.Result);
-                db.AddRange(requests.Zip(results, (req, ret) => ToRecord(req, ret)));
+                var records = requests.Zip(results, (req, ret) => ToRecord(req, ret));
+                foreach (var rec in records)
+                    logger.LogInformation($"Calculated {rec.InstrumentType} payoff - Scenario: {rec.Scenario} - Redemption: {rec.Redemption} - CouponPaid: {rec.CouponPaid}");
+                db.AddRange(records);
                 await db.SaveChangesAsync();
                 return Results.Ok(results);
             }

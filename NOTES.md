@@ -406,9 +406,9 @@ app.MapGet("/history", async (PayoffEngineDbContext db, string? instrumentType) 
 - [X] Add a short `.WithSummary()`/`.WithDescription()` to each endpoint — cheap, and it reads as intentional API design
 
 ### C2 — Structured logging
-- [ ] Inject `ILogger<T>` (or a logging delegate in minimal APIs) into the pricing endpoints
-- [ ] Log one structured line per price: instrument type, scenario, redemption — **not** the full request/response as an unstructured blob
-- [ ] Talking point: structured logging (named properties, not string concatenation) is what makes logs queryable in production (Seq/ELK/Application Insights) instead of just readable
+- [X] Inject `ILogger<T>` (or a logging delegate in minimal APIs) into the pricing endpoints
+- [X] Log one structured line per price: instrument type, scenario, redemption — **not** the full request/response as an unstructured blob
+- [X] Talking point: structured logging (named properties, not string concatenation) is what makes logs queryable in production (Seq/ELK/Application Insights) instead of just readable
 
 ### C3 — Health check
 - [ ] `builder.Services.AddHealthChecks()`, `app.MapHealthChecks("/health")`
