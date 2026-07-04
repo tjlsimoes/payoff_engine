@@ -411,8 +411,8 @@ app.MapGet("/history", async (PayoffEngineDbContext db, string? instrumentType) 
 - [X] Talking point: structured logging (named properties, not string concatenation) is what makes logs queryable in production (Seq/ELK/Application Insights) instead of just readable
 
 ### C3 — Health check
-- [ ] `builder.Services.AddHealthChecks()`, `app.MapHealthChecks("/health")`
-- [ ] Bonus: add a DB check (`AddDbContextCheck<PayoffEngineDbContext>()`) if Track B is done, so `/health` actually reflects DB connectivity
+- [X] `builder.Services.AddHealthChecks()`, `app.MapHealthChecks("/health")`
+- [X] Bonus: add a DB check (`AddDbContextCheck<PayoffEngineDbContext>()`) if Track B is done, so `/health` actually reflects DB connectivity
 
 ### C4 — Bonus: minimal auth
 - [ ] Simplest defensible version: an API key checked in middleware (`X-Api-Key` header vs a configured value) — not full JWT/identity, that's disproportionate for this project's scope
