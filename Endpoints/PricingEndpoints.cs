@@ -27,7 +27,7 @@ public static class PricingEndpoints
         app.MapGet("/instruments", (IEnumerable<IInstrumentPricer> pricers) =>
         {
             return Results.Ok(pricers.Select(p => p.InstrumentType));
-        });
+        }).WithDescription("List available instrument pricers.");
 
         // POST /price
         app.MapPost("/price", async (PayoffEngineDbContext db, PricingRequest req, IEnumerable<IInstrumentPricer> pricers, ILogger<Program> logger) =>
@@ -54,7 +54,7 @@ public static class PricingEndpoints
                 }
 
             return Results.BadRequest($"Unknown instrument type: {req.InstrumentType}");
-        });
+        }).WithDescription("Calculate payoff for a given instrument pricer and price history data.");
 
 
 
@@ -83,7 +83,7 @@ public static class PricingEndpoints
                 logger.LogError(e, "Falied to persist pricing record");
                 return Results.Problem("Error on database persistence");
             }
-        });
+        }).WithDescription("Calculate payoff for a given instrument pricer and price history data in bulk.");
 
         app.MapGet("/history", async (PayoffEngineDbContext db, string? instrumentType) =>
         {
@@ -91,7 +91,7 @@ public static class PricingEndpoints
             if (!String.IsNullOrEmpty(instrumentType))
                 query = query.Where(p => p.InstrumentType == instrumentType);
             return Results.Ok(await query.ToListAsync());
-        });
+        }).WithDescription("Get history of previous pricing requests and respective responses.");
 
 
     }

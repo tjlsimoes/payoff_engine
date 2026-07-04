@@ -401,9 +401,9 @@ app.MapGet("/history", async (PayoffEngineDbContext db, string? instrumentType) 
 *Third priority — do what fits, cut what doesn't. Each item below is independently ~15–30 minutes.*
 
 ### C1 — OpenAPI / Swagger
-- [ ] .NET 10 minimal APIs ship built-in OpenAPI support (`AddOpenApi()` / `MapOpenApi()`) — confirm `/openapi/v1.json` resolves
-- [ ] Optionally add Swagger UI (`Swashbuckle.AspNetCore` or the built-in Scalar UI) so the API is browsable, not just machine-readable
-- [ ] Add a short `.WithSummary()`/`.WithDescription()` to each endpoint — cheap, and it reads as intentional API design
+- [X] .NET 10 minimal APIs ship built-in OpenAPI support (`AddOpenApi()` / `MapOpenApi()`) — confirm `/openapi/v1.json` resolves
+- [X] Optionally add Swagger UI (`Swashbuckle.AspNetCore` or the built-in Scalar UI) so the API is browsable, not just machine-readable
+- [X] Add a short `.WithSummary()`/`.WithDescription()` to each endpoint — cheap, and it reads as intentional API design
 
 ### C2 — Structured logging
 - [ ] Inject `ILogger<T>` (or a logging delegate in minimal APIs) into the pricing endpoints

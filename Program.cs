@@ -1,14 +1,20 @@
 using PayoffEngine;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddInstrumentPricers();
 builder.Services.AddValidation();
+builder.Services.AddOpenApi();
 builder.AddPayoffEngineDb();
 
 var app = builder.Build();
 
-app.MapGet("/", () => "Hello World!");
+// if (app.Environment.IsDevelopment())
+app.MapOpenApi();                       //  /openapi/v1.json
+app.MapScalarApiReference();            //  /scalar/v1
+
+app.MapGet("/", () => "Hello World!").WithDescription("Default endpoint. Returns 'Hello World!'");
 
 app.MapPricingEndpoints();
 
