@@ -12,6 +12,7 @@
 
 @host = http://localhost:5116
 @contentType = application/json
+@apiKey  = local-dev-key-change-me
 
 ###############################################################################
 # BRC — Scenario 1: final price >= strike -> full notional, cash.
@@ -24,6 +25,7 @@
 ###############################################################################
 POST {{host}}/price
 Content-Type: {{contentType}}
+X-Api-Key: {{apiKey}}
 
 {
   "instrumentType": "BarrierReverseConvertible",
@@ -45,6 +47,8 @@ Content-Type: {{contentType}}
 ###############################################################################
 POST {{host}}/price
 Content-Type: {{contentType}}
+X-Api-Key: {{apiKey}}
+
 
 {
   "instrumentType": "BarrierReverseConvertible",
@@ -67,6 +71,7 @@ Content-Type: {{contentType}}
 ###############################################################################
 POST {{host}}/price
 Content-Type: {{contentType}}
+X-Api-Key: {{apiKey}}
 
 {
   "instrumentType": "BarrierReverseConvertible",
@@ -89,6 +94,7 @@ Content-Type: {{contentType}}
 ###############################################################################
 POST {{host}}/price
 Content-Type: {{contentType}}
+X-Api-Key: {{apiKey}}
 
 {
   "instrumentType": "Autocallable",
@@ -111,6 +117,7 @@ Content-Type: {{contentType}}
 ###############################################################################
 POST {{host}}/price
 Content-Type: {{contentType}}
+X-Api-Key: {{apiKey}}
 
 {
   "instrumentType": "Autocallable",
@@ -127,6 +134,7 @@ Content-Type: {{contentType}}
 ###############################################################################
 POST {{host}}/price
 Content-Type: {{contentType}}
+X-Api-Key: {{apiKey}}
 
 {
   "instrumentType": "RainbowKnockout",
@@ -145,6 +153,7 @@ Content-Type: {{contentType}}
 ###############################################################################
 POST {{host}}/price
 Content-Type: {{contentType}}
+X-Api-Key: {{apiKey}}
 
 {
   "instrumentType": "BarrierReverseConvertible",
@@ -161,6 +170,7 @@ Content-Type: {{contentType}}
 ###############################################################################
 POST {{host}}/price
 Content-Type: {{contentType}}
+X-Api-Key: {{apiKey}}
 
 {
   "instrumentType": "BarrierReverseConvertible",
@@ -184,6 +194,7 @@ Content-Type: {{contentType}}
 ###############################################################################
 POST {{host}}/price/batch
 Content-Type: {{contentType}}
+X-Api-Key: {{apiKey}}
 
 [
   { "instrumentType": "BarrierReverseConvertible", "notional": 1000, "strike": 1.00, "barrier": 0.70, "couponRate": 0.08, "pricePath": [1.00, 0.95, 1.02, 1.05] },
@@ -200,7 +211,7 @@ Content-Type: {{contentType}}
 ###############################################################################
 GET {{host}}/instruments
 Accept: {{contentType}}
-
+X-Api-Key: {{apiKey}}
 
 ###############################################################################
 # GET /history
@@ -208,3 +219,4 @@ Accept: {{contentType}}
 
 GET {{host}}/history
 Accept: {{contentType}}
+X-Api-Key: {{apiKey}}

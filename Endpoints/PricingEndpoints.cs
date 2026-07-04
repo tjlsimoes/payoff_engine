@@ -102,7 +102,7 @@ public static class PricingEndpoints
 
     async private static Task<PricingResult> PriceOneAsync(PricingRequest req, IEnumerable<IInstrumentPricer> pricers)
     {
-        await Task.Delay(30000);    // 30 seconds
+        await Task.Delay(20000);    // 30 seconds
         foreach (var p in pricers)
         {
             if (p.InstrumentType == req.InstrumentType)

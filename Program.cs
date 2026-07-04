@@ -11,6 +11,8 @@ builder.AddPayoffEngineDb();
 
 var app = builder.Build();
 
+app.UseApiKeyAuth();
+
 // if (app.Environment.IsDevelopment())
 app.MapOpenApi();                       //  /openapi/v1.json
 app.MapScalarApiReference();            //  /scalar/v1

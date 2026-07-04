@@ -415,8 +415,8 @@ app.MapGet("/history", async (PayoffEngineDbContext db, string? instrumentType) 
 - [X] Bonus: add a DB check (`AddDbContextCheck<PayoffEngineDbContext>()`) if Track B is done, so `/health` actually reflects DB connectivity
 
 ### C4 — Bonus: minimal auth
-- [ ] Simplest defensible version: an API key checked in middleware (`X-Api-Key` header vs a configured value) — not full JWT/identity, that's disproportionate for this project's scope
-- [ ] Talking point: name what you'd do for real auth (JWT bearer tokens, `[Authorize]`, ASP.NET Core Identity) without necessarily building it — knowing the next step matters as much as having built this particular gate
+- [X] Simplest defensible version: an API key checked in middleware (`X-Api-Key` header vs a configured value) — not full JWT/identity, that's disproportionate for this project's scope
+- [X] Talking point: name what you'd do for real auth (JWT bearer tokens, `[Authorize]`, ASP.NET Core Identity) without necessarily building it — knowing the next step matters as much as having built this particular gate
 
 **Checkpoint:** Walk through `/health`, the OpenAPI doc, and one log line from a real request — three concrete artifacts that show the project "looks shipped."
 

@@ -1,8 +1,8 @@
 # PayoffEngine
 
-A structured-product pricing REST API built with ASP.NET Core minimal APIs. It prices two contrasting instruments — a **Barrier Reverse Convertible** and an **Autocallable** — through a single polymorphic engine, with support for concurrent batch pricing.
+A structured-product pricing REST API built with ASP.NET Core minimal APIs. It prices two contrasting instruments — a **Barrier Reverse Convertible** and an **Autocallable** — through a single polymorphic engine, with support for concurrent batch pricing, SQLite-backed pricing history, and API-key protected endpoints.
 
-**Stack:** C# 14 · .NET 10 · ASP.NET Core minimal APIs
+**Stack:** C# 14 · .NET 10 · ASP.NET Core minimal APIs · EF Core (SQLite)
 
 ---
 
@@ -14,6 +14,29 @@ dotnet run
 
 The API listens on `http://localhost:5116` by default.
 
+On startup, pending EF Core migrations are applied automatically and the SQLite database file (`PayoffEngine.db`) is created if it doesn't exist yet.
+
+---
+
+## Testing
+
+The unit and integration test suite lives in a companion repository: [payoff_engine_tests](https://github.com/tjlsimoes/payoff_engine_tests).
+
+---
+
+## Authentication
+
+All endpoints except `/health`, `/openapi/*`, and `/scalar/*` require an API key on every request, passed via the `X-Api-Key` header:
+
+```bash
+curl http://localhost:5116/instruments \
+  -H "X-Api-Key: local-dev-key-change-me"
+```
+
+Requests without a valid key receive `401 Unauthorized`. The expected key is read from the `ApiKey` value in `appsettings.json` — the checked-in value (`local-dev-key-change-me`) is a local-dev placeholder only; a real deployment should override it via an environment variable or `dotnet user-secrets` rather than committing a real key to source control.
+
+All `curl` examples below include the header where it's required.
+
 ---
 
 ## Endpoints
@@ -23,7 +46,8 @@ The API listens on `http://localhost:5116` by default.
 Returns the list of supported instrument types.
 
 ```bash
-curl http://localhost:5116/instruments
+curl http://localhost:5116/instruments \
+  -H "X-Api-Key: local-dev-key-change-me"
 ```
 
 ```json
@@ -34,7 +58,7 @@ curl http://localhost:5116/instruments
 
 ### `POST /price`
 
-Prices a single instrument. Returns `200` with a `PricingResult`, or `400` if the instrument type is unknown.
+Prices a single instrument. Returns `200` with a `PricingResult`, or `400` if the instrument type or input is invalid. As a side effect, the request and its result are persisted as a `PricingRecord` for later retrieval via `GET /history`.
 
 **Request body**
 
@@ -50,8 +74,9 @@ Prices a single instrument. Returns `200` with a `PricingResult`, or `400` if th
 **Example — BRC, barrier breached**
 
 ```bash
-curl -X POST http://localhost:5000/price \
+curl -X POST http://localhost:5116/price \
   -H "Content-Type: application/json" \
+  -H "X-Api-Key: local-dev-key-change-me" \
   -d '{
     "instrumentType": "BarrierReverseConvertible",
     "notional": 1000,
@@ -74,8 +99,9 @@ curl -X POST http://localhost:5000/price \
 **Example — Autocallable, early redemption at period 3**
 
 ```bash
-curl -X POST http://localhost:5000/price \
+curl -X POST http://localhost:5116/price \
   -H "Content-Type: application/json" \
+  -H "X-Api-Key: local-dev-key-change-me" \
   -d '{
     "instrumentType": "Autocallable",
     "notional": 1000,
@@ -99,11 +125,12 @@ curl -X POST http://localhost:5000/price \
 
 ### `POST /price/batch`
 
-Prices an array of instruments concurrently. Always returns `200` with an array of `PricingResult` objects in the same order as the input.
+Prices an array of instruments concurrently. Always returns `200` with an array of `PricingResult` objects in the same order as the input. Every priced instrument is persisted as a `PricingRecord`, same as `POST /price`.
 
 ```bash
-curl -X POST http://localhost:5000/price/batch \
+curl -X POST http://localhost:5116/price/batch \
   -H "Content-Type: application/json" \
+  -H "X-Api-Key: local-dev-key-change-me" \
   -d '[
     {
       "instrumentType": "BarrierReverseConvertible",
@@ -123,6 +150,55 @@ curl -X POST http://localhost:5000/price/batch \
     }
   ]'
 ```
+
+---
+
+### `GET /history`
+
+Returns past pricing records, most recent first. Optionally filter by instrument type.
+
+```bash
+curl "http://localhost:5116/history?instrumentType=Autocallable" \
+  -H "X-Api-Key: local-dev-key-change-me"
+```
+
+```json
+[
+  {
+    "id": "0199...",
+    "instrumentType": "Autocallable",
+    "notional": 1000,
+    "strike": 1.00,
+    "barrier": 0.70,
+    "couponRate": 0.08,
+    "pricePath": "[0.92,0.96,1.02,0.98]",
+    "redemption": 1000.00,
+    "couponPaid": 60.00,
+    "scenario": "AutocalledAtPeriod3",
+    "barrierBreached": false,
+    "pricedAtUtc": "2026-07-04T09:12:00Z"
+  }
+]
+```
+
+---
+
+### `GET /health`
+
+Reports application health, including SQLite connectivity. Does **not** require an API key — intended for infrastructure/orchestrator probes.
+
+```bash
+curl http://localhost:5116/health
+```
+
+---
+
+### API documentation
+
+Interactive OpenAPI docs are exposed without an API key:
+
+- `GET /openapi/v1.json` — raw OpenAPI document.
+- `GET /scalar/v1` — browsable Scalar UI.
 
 ---
 
@@ -151,5 +227,9 @@ Loops over the price path. On each observation, if the price is at or above the 
 ## Architecture
 
 - **Polymorphic pricing engine** — pricers implement `IInstrumentPricer`. The endpoint resolves all registered pricers via `IEnumerable<IInstrumentPricer>` and selects by `InstrumentType` at runtime (strategy pattern via DI).
-- **DI lifetimes** — pricers are registered as `Singleton`. They are stateless and thread-safe, so a single shared instance per type is correct and efficient.
+- **DI lifetimes** — pricers are registered as `Singleton` (stateless, thread-safe — one shared instance per type is correct and efficient). `PayoffEngineDbContext` is registered `Scoped`, since it holds per-request unit-of-work state and isn't safe to share across requests.
 - **Concurrent batch pricing** — `POST /price/batch` starts all pricing tasks simultaneously with `Task.WhenAll`, so the batch completes in the time of a single pricing operation rather than the sum of all.
+- **Persistence** — every priced request/result pair is saved as a `PricingRecord` via EF Core (SQLite), queryable through `GET /history`; filters are applied on `IQueryable` before materializing the results, so filtering happens in the database, not in memory.
+- **API-key middleware** — a single piece of global middleware checks `X-Api-Key` on every request, with an explicit exemption list for `/health` and the docs endpoints. This is a deliberately lightweight auth gate; a production deployment would use JWT bearer tokens or ASP.NET Core Identity instead.
+- **Structured logging** — each priced request logs instrument type, scenario, and redemption as a structured line via `ILogger<T>`, rather than dumping the full request/response.
+- **Health check** — `/health` includes an EF Core `AddDbContextCheck<PayoffEngineDbContext>()`, so the endpoint reflects real database connectivity, not just process liveness.
